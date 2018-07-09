@@ -8,7 +8,7 @@ Created on Wed Jul  5 20:46:07 2017
 import numpy as np
 import csv
 import time
-#import sys
+import sys
 
 # Global variables
 
@@ -16,6 +16,27 @@ SolveThis=""
 m=np.zeros((9,9,9), dtype=int)
 sol=np.zeros((9,9), dtype=int)
 
+show_detail=0
+
+if sys.argv[1] != "":
+    SolveThis=sys.argv[1]
+    
+#SolveThis="010000034000079500029300600030607420086100090000050000940205870800060200670084003"
+#SolveThis="510070000039004507060800021073659080400230900006080700000912600000000003005000490"
+#SolveThis="400000805030000000000700000020000060000080400000010000000603070500200000104000000"
+#SolveThis="480300000000000071020000000705000060000200800000000000001076000300000400000050000"
+#SolveThis="009078020030050800050019300060030200700090004005040080008720050002060090070980600"
+#SolveThis="000027030400009500900540602000000004060000050200000000304071008006200001080390000"
+#SolveThis="605027439400069507900543602000000004060000053200000006354671008796200341182394765"
+#SolveThis="300080000000700005100000000000000360002004000070000000000060130045200000000000800"
+#SolveThis="000002000000070001700300090800700000020890600013006000090050824000008910000000000"
+#SolveThis="000658000004000000120000000000009607000300500002080003001900800306000004000047300"
+#SolveThis="000658000004000000120000000000009607000370500002080003001900800306000004000047300"
+
+#SolveThis="480300000000000071020000000705000060000200800000000000001076000300000400000050000"
+
+# This one needs to find the pair in 6x8 and 6x9 of [5 7] to eliminate in rest of 3x3 square
+SolveThis="100725439924863010000149286000586004000497003640231000790310002050670091001950008"
 
 
 # Function definitions
@@ -67,8 +88,21 @@ def eviltwin(r, c, dir, offset, val):
         m[r*3+i/3, c*3+i%3, val]=1
     return(change)
  
- 
- 
+    
+def identicaltwin(r, c, t1, t2, v1, v2):
+    change=0
+    for i in range(0,9):
+        if i != t1 and i != t2:
+            if m[r*3+i/3, c*3+i%3, v1]==0:
+                change=1
+                m[r*3+i/3, c*3+i%3, v1]=1
+            if m[r*3+i/3, c*3+i%3, v2]==0:
+                change=1
+                m[r*3+i/3, c*3+i%3, v2]=1
+    #detail_display()
+    return(change)
+    
+
 def twistedtriplet(r, c, x, y, z, v1, v2, v3):
     change=0
     vals=range(0,9)
@@ -102,30 +136,30 @@ def quadruplet(r, c, w, x, y, z, v1, v2, v3, v4):
  
 def pairs(r, c, ia, ib, numa, numb):
     change=0
-    # In the 3x3, remove A and B from possible values
+    # In index A and B, remove all other values
+    vals=range(0,9)
+    vals.remove(numa)
+    vals.remove(numb)
+    for v in vals:
+        if(m[r*3+ia/3, c*3+ia%3, v]==0):
+            change=1
+            m[r*3+ia/3, c*3+ia%3, v]=1
+            #print(" Marking",r+1,c+1,ia+1,i+1)
+        if(m[r*3+ib/3, c*3+ib%3, v]==0):
+            change=1
+            m[r*3+ib/3, c*3+ib%3, v]=1
+            #print(" Marking",r+1,c+1,ib+1,i+1)
+#    # Also need to remove inverse values from remaining squares
 #    idx=range(0,9)
 #    idx.remove(ia)
 #    idx.remove(ib)
 #    for i in idx:
-#        if(m[r*3+i/3, c*3+i%3, numa]==0):
-#            change=1
-#            m[r*3+i/3, c*3+i%3, numa]=1
-#        if(m[r*3+i/3, c*3+i%3, numb]==0):
-#            change=1
-#            m[r*3+i/3, c*3+i%3, numb]=1
-    # In index A and B, remove all other values
-    idx=range(0,9)
-    idx.remove(numa)
-    idx.remove(numb)
-    for i in idx:
-        if(m[r*3+ia/3, c*3+ia%3, i]==0):
-            change=1
-            m[r*3+ia/3, c*3+ia%3, i]=1
-            #print(" Marking",r+1,c+1,ia+1,i+1)
-        if(m[r*3+ib/3, c*3+ib%3, i]==0):
-            change=1
-            m[r*3+ib/3, c*3+ib%3, i]=1
-            #print(" Marking",r+1,c+1,ib+1,i+1)
+#        for v in (numa, numb):
+#            if(m[r*3+ia/3, c*3+ia%3, v]==0):
+#                #print "Changing %dx%d %d - %d" % (r+1,c+1,i+1,v+1)
+#                next
+#                #change=1
+#                #m[r*3+ia/3, c*3+ia%3, v]=1
     return(change)
            
 
@@ -134,8 +168,14 @@ def pairs(r, c, ia, ib, numa, numb):
 def display():
     for i in range(0,9):
         print(sol[i])
+    if show_detail:
+        detail_display()
 
-
+def detail_display():
+    for i in (range(0,9)):
+        for j in (range(0,9)):
+            if sum(m[i][j]) < 9:
+                print "%dx%d = %s" % (i+1, j+1, np.where(m[i][j]==0)[0]+1)
 
 
 def scan(debug=1):
@@ -146,7 +186,7 @@ def scan(debug=1):
                     idx=np.where(m[x,y]==0)[0][0]+1   # locate index
                     fill(x,y,idx)
                     if (debug==1):
-                        print("Found",x+1,y+1,idx)
+                        print "Found: %dx%d = %d" % (x+1,y+1,idx)
                         display()
                     return(1)
             for z in range(0,9):  # step through each number
@@ -154,14 +194,14 @@ def scan(debug=1):
                     idx=np.where(m[0:9, y, z]==0)[0][0]
                     fill(idx,y,z+1)
                     if (debug==1):
-                        print("Only num col",idx+1,y+1,z+1)
+                        print "Only num col: %dx%d = %d" % (idx+1,y+1,z+1)
                         display()
                     return(1)
                 if (sum(m[x, 0:9, z])==8):  # only number left in row
                     idx=np.where(m[x, 0:9, z]==0)[0][0]
                     fill(x,idx,z+1)
                     if (debug==1):
-                        print("Only num row",x+1,idx+1,z+1)  
+                        print "Only num row: %dx%d = %d" % (x+1,idx+1,z+1)  
                         display()
                     return(1)
     # Scan each 3x3
@@ -174,7 +214,7 @@ def scan(debug=1):
                         idx=np.where(tmt==0)[0][0]   # locate index
                         fill(x*3+idx/3, y*3+idx%3, z+1)
                         if (debug==1):
-                            print("Square",x*3+idx/3+1, y*3+idx%3+1, z+1)
+                            print "Only num square: %dx%d = %d" % (x*3+idx/3+1, y*3+idx%3+1, z+1)
                             display()
                         return(1)
     # Look for twins and triplets in each 3x3
@@ -198,6 +238,7 @@ def scan(debug=1):
                         if (debug==1 and t>0):
                             print("Twin sq col", x+1, y+1, idxa+1, idxb+1, z+1)
                         foundtwin+=t
+                    # Remove these values from other spots in 3x3 square
                 if (sum(tmt)==6):   # three missing values
                     idx=np.where(tmt==0)[0]
                     idxa=idx[0]
@@ -213,6 +254,7 @@ def scan(debug=1):
                         if (debug==1 and t>0):
                             print("Triplet sq col", x+1, y+1, idxa+1, idxb+1, idxc+1, z+1)
                         foundtwin+=t
+                    # Remove these values from other spots in 3x3 square
     if(foundtwin>0):
         return(1)
     # Look for hidden twins                        
@@ -229,6 +271,7 @@ def scan(debug=1):
                             idxa=np.where(tmta==0)[0]
                             idxb=np.where(tmtb==0)[0]
                             if(sum(idxa==idxb)==2):
+                                #print "Found possible pair: %dx%d %d %d = [%d %d]" % (x+1,y+1,idxa[0]+1,idxa[1]+1,za+1,zb+1)
                                 t=pairs(x, y, idxa[0], idxa[1], za, zb)
                                 if (debug==1 and t>0):
                                     print("Hidden twin", x+1, y+1, idxa+1, za+1, zb+1)
@@ -270,6 +313,27 @@ def scan(debug=1):
                             foundtwin+=t
     if(foundtwin>0):
         return(foundtwin)
+
+    # Look for identical twins
+    for x in range(0,3):
+        for y in range(0,3):
+            for za in range(0,8):
+                for zb in range(za+1,9):
+                    i1 = x*3 + za/3
+                    j1 = y*3 + za%3
+                    i2 = x*3 + zb/3
+                    j2 = y*3 + zb%3
+                    w1 = np.where(m[i1][j1]==0)[0]
+                    w2 = np.where(m[i2][j2]==0)[0]
+                    if sum(m[i1][j1]) == 7 and sum(m[i2][j2]) == 7 and (w1 == w2).all():
+                        w=np.where(m[i1][j1]==0)[0]
+                        t=identicaltwin(x,y,za,zb,w[0],w[1])
+                        if debug==1 and t>0:
+                            print "Identical twins %dx%d and %dx%d = %s" % (i1+1, j1+1, i2+1, j2+1, w+1)
+                        foundtwin+=t
+    if(foundtwin>0):
+        return(foundtwin)
+    
     # Look for twisted triplets
     for x in range(0,3):
         for y in range(0,3):
@@ -283,14 +347,15 @@ def scan(debug=1):
                         mtc=m[x*3:x*3+3, y*3:y*3+3, zc]
                         tmtc=mtc.reshape(1,9)[0]
                         sum3=sum(tmta+tmtb+tmtc==3)  # All 3 values eliminated
+                        sum2=sum(tmta+tmtb+tmtc==2)  # Only 2 values eliminated
                         sum1=sum(tmta+tmtb+tmtc==1)  # Only one value eliminated
                         sum0=sum(tmta+tmtb+tmtc==0)  # None of values eliminated
-                        if (sum3==6 and sum0>0 and sum0+sum1==3):  #(sum0==2 and sum1==1 or sum0==1 and sum1==2)):
+                        if (sum3==6 and sum0>0 and sum0+sum1+sum2==3):  #(sum0==2 and sum1==1 or sum0==1 and sum1==2)):
                             idx=np.where(tmta+tmtb+tmtc<3)[0]
                             t=twistedtriplet(x, y, idx[0], idx[1], idx[2], za, zb, zc)
                             if (debug==1 and t>0):
-                                print("Twisted triplets",
-                                      x+1, y+1, idx[0]+1, idx[1]+1, idx[2]+1, za+1, zb+1, zc+1)
+                                print "Twisted triplets: Sq %dx%d Idx [%d %d %d] = [%d %d %d]" % \
+                                (x+1, y+1, idx[0]+1, idx[1]+1, idx[2]+1, za+1, zb+1, zc+1)
                             foundtwin+=t
     if(foundtwin>0):
         return(foundtwin)
@@ -393,6 +458,11 @@ def solver(s,d=1):
             sudoku=sudoku+str(sol[i][j])
     if (sudoku.find("0")>=0):
         print("INCOMPLETE!")
+        # Dump known values
+        for i in (range(0,9)):
+            for j in (range(0,9)):
+                if sum(m[i][j]) < 9:
+                    print "%dx%d = %s" % (i+1, j+1, np.where(m[i][j]==0)[0]+1)
         return(0)
     print("SUCCESS!")    
     return(1)
@@ -402,21 +472,7 @@ def solver(s,d=1):
 
 # Main routine
 
-#SolveThis="010000034000079500029300600030607420086100090000050000940205870800060200670084003"
-#SolveThis="510070000039004507060800021073659080400230900006080700000912600000000003005000490"
-#SolveThis="400000805030000000000700000020000060000080400000010000000603070500200000104000000"
-#SolveThis="480300000000000071020000000705000060000200800000000000001076000300000400000050000"
-#SolveThis="009078020030050800050019300060030200700090004005040080008720050002060090070980600"
-#SolveThis="000027030400009500900540602000000004060000050200000000304071008006200001080390000"
-#SolveThis="605027439400069507900543602000000004060000053200000006354671008796200341182394765"
 
-#SolveThis="300080000000700005100000000000000360002004000070000000000060130045200000000000800"
-#SolveThis="000002000000070001700300090800700000020890600013006000090050824000008910000000000"
-
-SolveThis="480300000000000071020000000705000060000200800000000000001076000300000400000050000"
-
-#SolveThis="000658000004000000120000000000009607000300500002080003001900800306000004000047300"
-#SolveThis="000658000004000000120000000000009607000370500002080003001900800306000004000047300"
 top95=1
 
 if (SolveThis != ""):
